@@ -1,0 +1,5 @@
+data/
+faiss_db/
+reports/
+test_script/
+src/.env
