@@ -351,7 +351,7 @@ def run_all_queries(components: Dict[str, Any]):
     print(f"{'='*60}")
     
     # Load queries from input_test.json
-    input_file = Config.BASE_DIR / "data" / "input_test.json"
+    input_file = Config.BASE_DIR / "data" / "input_test3.json"
     
     if not input_file.exists():
         logging.error(f"❌ Input file not found: {input_file}")
@@ -413,6 +413,7 @@ def run_all_queries(components: Dict[str, Any]):
             # Extract information from IR-COT result
             answer = result.get('answer', 'No answer generated')
             answer_reasoning = result.get('answer_reasoning', 'No reasoning available')
+            confidence_score = result.get('confidence_score', 0)
             fact_list = result.get('reasoning_chain', [])
             metadata = result.get('metadata', {})
             
@@ -425,6 +426,7 @@ def run_all_queries(components: Dict[str, Any]):
                 'ground_truth': ground_truth,
                 'answer': answer,
                 'answer_reasoning': answer_reasoning,
+                'confidence_score': confidence_score,
                 'fact_list': fact_list,
                 'metadata': metadata
             }
@@ -448,6 +450,7 @@ def run_all_queries(components: Dict[str, Any]):
                 'ground_truth': ground_truth,
                 'answer': f"Error: {error_msg}",
                 'answer_reasoning': "Error in processing",
+                'confidence_score': 0,
                 'fact_list': [],
                 'metadata': {
                     'error': error_msg,
@@ -467,7 +470,7 @@ def run_all_queries(components: Dict[str, Any]):
             print(f"✅ Progress: {i}/{len(queries_data)} queries completed...")
     
     # Save results to reports/output.json
-    output_file = Config.BASE_DIR / "reports" / "output.json"
+    output_file = Config.BASE_DIR / "reports" / "output3.json"
     
     try:
         # Ensure reports directory exists

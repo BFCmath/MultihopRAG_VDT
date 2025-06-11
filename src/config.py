@@ -40,8 +40,8 @@ class Config:
     # flow: 2 agent nó khác biệt -> summarization 
     # IR-COT specific settings
     MAX_ITERATIONS = 5# 10
-    TOP_K_DOCUMENTS = 5
-    EXPANSION_FACTOR = 5  # Multiplier for enhanced retrieval (fetch N times more documents)
+    TOP_K_DOCUMENTS = 10
+    EXPANSION_FACTOR = 2  # Multiplier for enhanced retrieval (fetch N times more documents)
     
     NO_REPEAT_RETRIEVE_ENABLE = False  # Enable duplicate filtering across iterations
     REMOVE_SOURCES_ENABLE = False  # Enable source removal preprocessing
@@ -55,7 +55,7 @@ class Config:
     ENHANCED_SEARCH_ENABLE = True  # Enable/disable multi-method search (semantic + lexical + fuzzy)
     
     # Confidence score settings
-    CONFIDENCE_THRESHOLD = 3  # Minimum confidence score (0-5) to return final answer, else return "Insufficient information"
+    CONFIDENCE_THRESHOLD = 1  # Minimum confidence score (0-5) to return final answer, else return "Insufficient information"
     
     # Reranker settings (disabled for now)  
     RERANK_TOP_K = 5 

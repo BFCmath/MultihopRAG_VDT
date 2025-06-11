@@ -212,10 +212,10 @@ class IRCOTStructure(MultiHopRagStructure):
                 }
                 fact_list_for_report.append(fact_entry)
                 
-                # # Check for termination condition
-                # if self._is_answer_complete(established_facts):
-                #     self.logger.info(f"Termination: Sufficient facts established for complete answer")
-                #     break
+                # Check if max iterations reached after fact extraction
+                if iteration >= self.max_iterations - 1:
+                    self.logger.info(f"Termination: Max iterations ({self.max_iterations}) reached after fact extraction")
+                    break
                 
                 # Step (ii): Generate Next Search Query
                 self.logger.info(f"Iteration {iteration + 1}: Query Generation Step")
@@ -288,6 +288,8 @@ class IRCOTStructure(MultiHopRagStructure):
             result = {
                 'question': question,
                 'answer': final_answer,
+                'answer_reasoning': answer_reasoning,  # Add answer reasoning to result
+                'confidence_score': confidence,  # Add confidence score to result
                 'reasoning_chain': established_facts,  # Facts are the reasoning chain
                 'retrieved_documents': all_documents,
                 'metadata': {

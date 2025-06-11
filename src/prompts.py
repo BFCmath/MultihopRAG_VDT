@@ -42,17 +42,22 @@ Now, reformulate the following query:
     IR_COT_REASONING_PROMPT = """You are an expert at multi-step reasoning and fact extraction.
 You are given the 'Original Question', the 'Current Fact' (which is a list of facts established in previous steps, if any), a 'Current Small Question' that was just executed, and the 'Relevant Documents for Small Question'.
 You are excellent at reasoning based on the 'Current Fact' and analyzing the 'Relevant Documents for Small Question' to deduce a 'New Fact' that contributes to answering the 'Original Question'.
+Your primary goal is to extract as much relevant information as possible from the provided documents in each step to build a detailed and comprehensive answer.
 
 Requirements:
 1.  Your output must consist of two sections: `### Reasoning:` and `### New Fact:`.
 2.  Follow the formatting of the examples provided for these sections.
-3.  The `New Fact` should be short, concise, and directly derived from the 'Relevant Documents for Small Question' in the context of the 'Original Question' and the existing 'Current Fact' list. It should be a piece of information that helps build towards the answer to the Original Question.
+3.  The `New Fact` should be a comprehensive statement. It must extract **all relevant details** from the 'Relevant Documents for Small Question' that address the 'Current Small Question' and contribute to the 'Original Question'. Prioritize capturing details like names, dates, quantities, and specific claims, rather than being overly brief.
 
 Instruction:
 1.  Carefully analyze the 'Original Question' and the 'Current Fact' (a list of previously established facts) to understand the overall goal and what has been established so far. If 'Current Fact' is empty, this is likely the first step.
 2.  Examine the 'Current Small Question' and the 'Relevant Documents for Small Question' to identify the specific information sought and found in the current step.
-3.  Based on your analysis, write down your step-by-step `Reasoning` process. This should explain how the retrieved information helps in progressing towards the 'Original Question', considering all entries in 'Current Fact'.
-4.  Finally, formulate the `New Fact` based on your reasoning and the provided documents for the current small question. This new fact will be added to the list of facts for subsequent steps.
+3.  Based on your analysis, write down your step-by-step `Reasoning` process. This should explain how the retrieved information, in all its detail, helps in progressing towards the 'Original Question', considering all entries in 'Current Fact'.
+4.  Finally, formulate the `New Fact`. This fact should be as detailed as possible, incorporating all pertinent information from the 'Relevant Documents for Small Question' as identified in your reasoning. This new fact will be added to the list of facts for subsequent steps.
+5.  **If the `Relevant Documents for Small Question` do not provide a complete answer to the `Current Small Question` (e.g., they provide the main information but are missing a specific source or date that was asked for), you should still extract the substantial facts that are present. Only output `No new fact` if the documents provide no relevant information at all for the small question.**
+6.  If `Relevant Documents for Small Question` answer the `Current Small Question` but does not mention the source and datetime. The `New Fact` MUST directly answer the `Current Small Question` like `Current Small Question` do not ask about source and datetime.
+7.  If `Relevant Documents for Small Question` answer the `Current Small Question` cannot answer the `Original Question`, but contain information support the `Original Question`, you should output that into `New Fact`.
+8.  Avoid answer "the provided document do not contain information ...", instead answer `No new fact`.
 
 Example 1:
 ### Original Question: According to reports from "SpaceNews" and "Planetary Society Journal," what was the primary objective of the Artemis I mission, and did it involve a crewed lunar landing?
@@ -66,11 +71,9 @@ Example 1:
 [Document 1 (SpaceNews): "The Artemis I mission, launched successfully last November, served as an uncrewed flight test of NASA's Space Launch System (SLS) rocket and Orion spacecraft. The primary objective was to demonstrate Orion's capabilities in a lunar orbital environment and ensure a safe re-entry, splashdown, and recovery prior to the first flight with astronauts."]
 
 ### Reasoning:
-The Original Question asks about the primary objective of Artemis I and whether it was crewed, according to two sources ("SpaceNews" and "Planetary Society Journal"). The Current Small Question focuses on SpaceNews's report. The 'Current Fact' is empty, indicating this is the first step.
-Document 1 (SpaceNews) states the primary objective was to "demonstrate Orion's capabilities...and ensure a safe re-entry, splashdown, and recovery prior to the first flight with astronauts." It also explicitly states Artemis I was an "uncrewed flight test."
-The New Fact should capture the objective as stated by SpaceNews and the uncrewed nature, which are key components needed to answer the Original Question.
+The Original Question asks about the primary objective of Artemis I and its crew status, according to "SpaceNews" and another source. This is the first step. The Current Small Question focuses on the "SpaceNews" report. Document 1 provides several key details: the mission was an "uncrewed flight test," it tested specific hardware ("NASA's Space Launch System (SLS) rocket and Orion spacecraft"), its objective was to "demonstrate Orion's capabilities" and ensure "safe re-entry, splashdown, and recovery," and this was a precursor to future astronaut flights. It also mentions the launch timing ("last November"). To build a comprehensive answer, the New Fact should capture all these details, not just a brief summary.
 
-### New Fact: SpaceNews reports the primary objective of Artemis I was to test the SLS rocket and Orion spacecraft in a lunar environment and ensure safe re-entry and recovery; it was an uncrewed mission.
+### New Fact: According to SpaceNews, the Artemis I mission, launched in November, was an uncrewed flight test of NASA's Space Launch System (SLS) and Orion spacecraft. Its primary objective was to demonstrate Orion's capabilities in a lunar orbital environment and to ensure its safe re-entry, splashdown, and recovery before the first crewed flight.
 
 Example 2:
 ### Original Question: Based on articles from "Climate Change Today" detailing impacts in Europe and "Global Weather Patterns Review" discussing shifts in North America, is there a consensus on whether rising global temperatures are leading to more frequent heatwaves in both regions?
@@ -84,13 +87,9 @@ Example 2:
 [Document 1 (Global Weather Patterns Review): "Recent analysis in North America shows a clear trend: as average global temperatures climb, the continent is witnessing more prolonged and severe heatwave events, particularly in the southwestern United States and parts of Canada."]
 
 ### Reasoning:
-The Original Question asks if there's a consensus between two sources on rising global temperatures leading to more frequent heatwaves in Europe AND North America.
-The 'Current Fact' already establishes that "Climate Change Today" links rising temperatures to more heatwaves in Europe.
-The Current Small Question seeks information from "Global Weather Patterns Review" regarding North America.
-Document 1 states North America is "witnessing more prolonged and severe heatwave events" as global temperatures climb.
-This new piece of information regarding North America is crucial for determining if there's a consensus as asked in the Original Question.
+The Original Question seeks to establish a consensus between two sources on heatwaves in Europe and North America. The 'Current Fact' already covers Europe. The Current Small Question now addresses North America using "Global Weather Patterns Review." Document 1 establishes a clear link between rising global temperatures and heatwaves in North America. To provide a detailed basis for comparison, I need to extract not just the link, but also the characteristics of these events ("prolonged and severe") and the specific regions affected ("southwestern United States and parts of Canada"). This level of detail is crucial for a robust answer to the Original Question.
 
-### New Fact: "Global Weather Patterns Review" indicates that as global temperatures rise, North America is experiencing more frequent and severe heatwave events.
+### New Fact: "Global Weather Patterns Review" reports a clear trend where rising average global temperatures are linked to more prolonged and severe heatwave events in North America, with specific impacts noted in the southwestern United States and parts of Canada.
 
 Example 3:
 ### Original Question: Comparing the launch strategies of "Starlink" as reported by "Satellite Weekly" and "OneWeb" as detailed in "Constellation Monthly", which service aimed for initial global coverage more rapidly?
@@ -104,13 +103,41 @@ Example 3:
 [Document 1 (Constellation Monthly): "OneWeb's initial deployment focused on providing coverage to regions above 60 degrees North latitude, including Alaska, Canada, and Northern Europe, before gradually expanding to other parts of the globe."]
 
 ### Reasoning:
-The Original Question asks for a comparison of launch strategies for Starlink and OneWeb regarding the rapidity of achieving global coverage, based on information from two different sources.
-The 'Current Fact' describes Starlink's strategy as aiming for near-global coverage rapidly.
-The Current Small Question is about OneWeb's strategy from "Constellation Monthly."
-Document 1 states OneWeb focused initially on polar regions before global expansion. This provides the contrasting information needed for the comparison sought by the Original Question.
-The New Fact should capture OneWeb's initial geographical focus.
+The Original Question is a comparative one about the speed of achieving global coverage for Starlink vs. OneWeb. The 'Current Fact' establishes Starlink's strategy as rapid and near-global. The Current Small Question looks for OneWeb's strategy. Document 1 describes a fundamentally different, geographically-focused strategy for OneWeb. To create a strong point of comparison, I must extract all the details: the initial focus was on a specific latitude ("above 60 degrees North"), the specific examples of these regions ("Alaska, Canada, and Northern Europe"), and the nature of the plan ("before gradually expanding"). These details are essential to contrast with Starlink's approach.
 
-### New Fact: "Constellation Monthly" details OneWeb's initial deployment strategy as focusing on providing coverage to regions above 60 degrees North latitude before subsequent global expansion.
+### New Fact: "Constellation Monthly" reports that OneWeb's initial deployment strategy was not for immediate global coverage, but instead focused on providing service to regions above 60 degrees North latitude, specifically mentioning Alaska, Canada, and Northern Europe, before planning a gradual expansion to the rest of the world.
+
+**Example 4: (Extracting partial but critical information)**
+### Original Question: What were the Q4 2023 revenue figures for 'Global Petro' and 'Energy United' as reported by Reuters and Bloomberg?
+
+### Current Fact:
+- A report from Reuters indicates that 'Global Petro' posted Q4 2023 revenues of $5.2 billion.
+
+### Current Small Question: What were the Q4 2023 revenue figures for 'Energy United' according to Bloomberg?
+
+### Relevant Documents for Small Question:
+[Document 1: "A recent financial filing shows Energy United's revenue for the fourth quarter of 2023 was $4.8 billion, a slight decrease from the previous year. The company cited market volatility as the primary reason for the dip."]
+
+### Reasoning:
+The Original Question asks for Q4 2023 revenue for two companies from two specific sources. I have the figure for 'Global Petro' from Reuters. The Current Small Question specifically asks for 'Energy United's' revenue *according to Bloomberg*. The provided document gives a clear revenue figure for Energy United for Q4 2023 ($4.8 billion) and even context (a slight decrease due to market volatility). However, it attributes this to a "financial filing," not to "Bloomberg." According to Instruction #5, instead of returning 'No new fact' because the source doesn't match, I should extract the highly relevant core information. The revenue figure itself is critical to answering the Original Question.
+
+### New Fact: A financial filing states that Energy United's revenue for the fourth quarter of 2023 was $4.8 billion.
+
+**Example 5: (Extracting core data when date is missing)**
+### Original Question: What was the main policy change announced by the Federal Transport Agency in their press release on May 15, 2024, regarding electric vehicle subsidies?
+
+### Current Fact:
+(empty)
+
+### Current Small Question: What was the main policy change regarding electric vehicle subsidies announced by the Federal Transport Agency on May 15, 2024?
+
+### Relevant Documents for Small Question:
+[Document 1 (Federal Government News Portal): "The Federal Transport Agency has updated its subsidy program for electric vehicles. Effective immediately, the maximum available tax credit for new EV purchases will be reduced from $7,500 to $5,000."]
+
+### Reasoning:
+The Original Question asks about a specific policy change from the Federal Transport Agency on a specific date (May 15, 2024). The Current Small Question targets this information. The provided document clearly states the policy change: the EV tax credit was reduced from $7,500 to $5,000. It also correctly attributes this to the "Federal Transport Agency". However, the document does not mention the date "May 15, 2024." This is a missing minor detail. The most important information—the actual policy change—is present and directly addresses the core of the Original Question. Therefore, I will extract this information.
+
+### New Fact: The Federal Transport Agency announced an update to its electric vehicle subsidy program, reducing the maximum available tax credit for new purchases from $7,500 to $5,000.
 
 Now think step by step based on the following information and generate the new fact
 ### Original Question: {question}
@@ -125,85 +152,79 @@ Now think step by step based on the following information and generate the new f
     IR_COT_QUERY_GENERATOR_PROMPT = """You are an expert Query Generator. Your primary goal is to determine the *next logical piece of information* required to answer the 'Original Question', given the 'Current Fact' (a list of facts already established). Based on this, you will generate a targeted search query using the most appropriate search methods.
 
 **Requirements:**
-1. Your output must consist of three sections: `### Reasoning for Next Query:`, `### Next Search Query:`, and `### Keyword Search:`.
-2. Follow the formatting of the examples provided for these sections.
-3. The `Next Search Query` is for semantic search and should be a concise, natural language query targeting the missing information.
-4. The `Keyword Search` should list specific keywords for lexical search (e.g., names, dates, sources), or "NO_NEED" if not necessary.
-5. If multiple keywords, separate them with commas.
-6. If the 'Current Fact' fully addresses the 'Original Question', set `Next Search Query` to "NO_QUERY_NEEDED" and `Keyword Search` to "NO_NEED".
-7. Always try to breakdown the complex queries into smaller queries.
-8. Try to brainstorm and chunk down the `Original Question` into specific smaller queries to confirm a small fact to avoid a loop of `The provided documents do not confirm that ...`
+1.  Your output must consist of three sections: `### Reasoning for Next Query:`, `### Next Search Query:`, and `### Keyword Search:`.
+2.  Follow the formatting of the examples provided for these sections.
+3.  The `Next Search Query` is for semantic search and should be a concise, natural language query targeting the missing information.
+4.  The `Keyword Search` should list specific keywords for lexical search (e.g., names, dates, sources), or "NO_NEED" if not necessary.
+5.  If multiple keywords, separate them with commas.
+6.  If the 'Current Fact' fully addresses the 'Original Question', set `Next Search Query` to "NO_QUERY_NEEDED" and `Keyword Search` to "NO_NEED".
+7.  Always aim to break down complex questions into smaller, manageable queries to build the answer step-by-step.
+8.  **CRITICAL FAILURE RECOVERY:** If the `Current Fact` contains `"No new fact"`, you must treat this as a signal that the previous query was too complex or unanswerable. Your immediate priority is to **decompose the problem further**. Generate a much simpler, more foundational query to unblock the process. For example, instead of asking for a comparison, ask for a single data point; instead of asking for a conclusion, ask for a definition; or focus on one entity instead of two; or focus on the content of question instead of datetime and source (avoid everything related to datetime and source).
 
 **Instruction:**
-1. Analyze the 'Original Question' to understand the complete information required.
-2. Review the 'Current Fact' to identify what is already known and what remains missing.
-3. Formulate a `Next Search Query` for semantic search to gather the next piece of information.
-4. Identify any specific terms (e.g., names, dates, sources) that require exact matching (`LEXICAL`), and list them in `Keyword Search`. If none are needed, set to "NO_NEED".
-5. Use `Keyword Search` only when necessary (e.g., to confirm a source, handle misspellings, or retrieve precise details like dates). Do not include keywords unless they enhance retrieval.
-6. If the 'Current Fact' is sufficient, set `Next Search Query` to "NO_QUERY_NEEDED" and `Keyword Search` to "NO_NEED".
-7. If 'Current Fact` shows that asking the same question continuosly cause a loop, brainstorm and breakdown or ask a new question instead focus on that aspect.
+1.  Analyze the 'Original Question' to understand the complete information required.
+2.  Review the 'Current Fact' to identify what is already known and what remains missing. **Pay close attention to any "No new fact" entries.**
+3.  If `"No new fact"` is present, follow the critical failure recovery instruction (Requirement #8) to formulate a simpler query.
+4.  Otherwise, formulate a `Next Search Query` for semantic search to gather the next logical piece of information.
+5.  Identify any specific terms (e.g., names, dates, sources) that require exact matching (`LEXICAL`), and list them in `Keyword Search`. If none are needed, set to "NO_NEED".
+6.  Use `Keyword Search` only when necessary (e.g., to confirm a source, handle misspellings, or retrieve precise details like dates). Do not include keywords unless they enhance retrieval.
+7.  If the 'Current Fact' is sufficient, set `Next Search Query` to "NO_QUERY_NEEDED" and `Keyword Search` to "NO_NEED".
 
 **Examples:**
 
-**Example 1:**  
-### Original Question: Between the claims made by 'FusionForward Inc.' in their investor briefing on February 20, 2024, regarding achieving 'net energy gain' in their latest fusion reactor prototype, and the independent assessment report published by the 'National Ignition Facility Review Panel' on May 5, 2024, which analyzed publicly available data and supplementary materials from FusionForward, was there consistency in the definition of 'net energy gain' used and the substantiation of the claim?  
-### Current Fact:  
-(empty)  
-### Reasoning for Next Query:  
-The Original Question is complex and requires multiple pieces of information to determine if there’s consistency between FusionForward Inc.’s claims and the National Ignition Facility Review Panel’s assessment. It involves two key components: (1) understanding FusionForward’s claim of 'net energy gain' from their February 20, 2024, investor briefing, including their definition and evidence, and (2) comparing it to the Review Panel’s definition and analysis from their May 5, 2024, report. With no 'Current Fact', we need to start at the beginning. The first logical step is to retrieve FusionForward’s specific claim—focusing on their definition of 'net energy gain' and any substantiating data (e.g., energy input, output, or experimental results) from the investor briefing. This is a small, focused question, as the definition and evidence are foundational to later compare with the Review Panel’s perspective. A semantic search will capture the conceptual claim, while keywords like "FusionForward Inc.," "February 20, 2024," and "net energy gain" will ensure precision in targeting the briefing and term. Subsequent queries can address the Review Panel’s report and then evaluate consistency.  
-### Next Search Query:  
-What did FusionForward Inc. claim about achieving 'net energy gain' in their latest fusion reactor prototype in their investor briefing on February 20, 2024?  
-### Keyword Search:  
+**Example 1:**
+### Original Question: Between the claims made by 'FusionForward Inc.' in their investor briefing on February 20, 2024, regarding achieving 'net energy gain' in their latest fusion reactor prototype, and the independent assessment report published by the 'National Ignition Facility Review Panel' on May 5, 2024, which analyzed publicly available data and supplementary materials from FusionForward, was there consistency in the definition of 'net energy gain' used and the substantiation of the claim?
+### Current Fact:
+(empty)
+### Reasoning for Next Query:
+The Original Question is complex and requires multiple pieces of information. It involves comparing FusionForward's claims with the Review Panel's assessment. With no 'Current Fact', the first logical step is to retrieve FusionForward's specific claim from their February 20, 2024, briefing. This is a small, focused question about their definition of 'net energy gain' and any supporting data. A semantic search can capture the concept, while keywords ensure we target the correct company and date.
+### Next Search Query:
+What did FusionForward Inc. claim about achieving 'net energy gain' in their latest fusion reactor prototype in their investor briefing on February 20, 2024?
+### Keyword Search:
 "FusionForward Inc.", "February 20, 2024"
 
-**Example 2:**  
-### Original Question: Considering the World Health Organization's (WHO) public health guidance on sugar consumption issued on March 4, 2015, and the subsequent statements made by the International Food & Beverage Alliance (IFBA) in their press release dated April 10, 2015, regarding industry commitments, was there a clear alignment or a notable divergence in the proposed timelines and targets for sugar reduction in products?  
-### Current Fact:  
-- On March 4, 2015, the WHO recommended that adults and children reduce their daily intake of free sugars to less than 10 percent of total energy intake, with a further reduction to below 5 percent (roughly 25 grams or 6 teaspoons per day) for additional health benefits.  
-- The WHO guideline is part of efforts to halt the rise in diabetes, obesity, and dental caries, aligning with the Global Action Plan for NCDs 2013–2020.  
-- The provided documents do not confirm specific timelines or targets for sugar reduction in products proposed by the International Food & Beverage Alliance (IFBA) in their April 10, 2015, press release.  
-### Reasoning for Next Query:  
-The Original Question seeks to compare the WHO’s guidance with the IFBA’s commitments to determine alignment or divergence in timelines and targets for sugar reduction in products. The 'Current Fact' establishes the WHO’s position: a clear recommendation to reduce free sugars to less than 10 percent of energy intake, with a conditional goal of below 5 percent, issued on March 4, 2015. We also know this ties to broader NCD goals. However, the IFBA’s press release from April 10, 2015, lacks specific details in the provided documents about their proposed timelines or targets for sugar reduction. This absence complicates a direct comparison, as industry commitments may involve varied approaches—such as gradual reformulation, product-specific goals, or no firm deadlines—making alignment or divergence hard to assess without precise data. To address this, we need to break the question into a smaller, more focused step: first, retrieve the IFBA’s specific commitments, including any stated timelines or targets for sugar reduction, from their April 10, 2015, press release. A semantic search will explore the general stance, while keywords will pinpoint exact terms or dates.  
-### Next Search Query: 
-What targets for sugar reduction in products did the International Food & Beverage Alliance (IFBA)?  
-### Keyword Search: 
-"International Food & Beverage Alliance", "IFBA"
+**Example 2:**
+### Original Question: Considering the World Health Organization's (WHO) public health guidance on sugar consumption issued on March 4, 2015, and the subsequent statements made by the International Food & Beverage Alliance (IFBA) in their press release dated April 10, 2015, regarding industry commitments, was there a clear alignment or a notable divergence in the proposed timelines and targets for sugar reduction in products?
+### Current Fact:
+- On March 4, 2015, the WHO recommended that adults and children reduce their daily intake of free sugars to less than 10 percent of total energy intake, with a further reduction to below 5 percent for additional health benefits.
+### Reasoning for Next Query:
+The Original Question requires a comparison between WHO guidance and IFBA commitments. The 'Current Fact' has established the WHO's position. The missing piece is the IFBA's stance. The next logical step is to query for the specific details of the IFBA's press release from April 10, 2015, focusing on their proposed timelines and targets for sugar reduction. This will provide the necessary information for the comparison.
+### Next Search Query:
+What specific timelines or targets for sugar reduction did the International Food & Beverage Alliance (IFBA) propose in their press release from April 10, 2015?
+### Keyword Search:
+"International Food & Beverage Alliance", "IFBA", "April 10, 2015"
 
-**Example 3:**  
-### Original Question:  
-Comparing ingredient lists, does 'Coca-Cola Classic' not list 'aspartame' while 'Coca-Cola Zero Sugar' does?  
-### Current Fact:  
-- According to the Coca-Cola Company’s website, Coca-Cola Zero Sugar includes aspartame and acesulfame potassium as sweeteners in its ingredient list.  
-- The ingredient list for Coca-Cola Classic, as per the Coca-Cola Company’s product labeling, includes carbonated water, high fructose corn syrup, caramel color, phosphoric acid, natural flavors, and caffeine, with no mention of aspartame.  
-### Reasoning for Next Query:  
-The Original Question requires a comparison of the ingredient lists for 'Coca-Cola Classic' and 'Coca-Cola Zero Sugar' to determine if the former excludes aspartame while the latter includes it. The 'Current Fact' provides both pieces: Coca-Cola Zero Sugar explicitly lists aspartame as a sweetener, and Coca-Cola Classic’s ingredient list does not include aspartame, instead using high fructose corn syrup. This information directly addresses the question, confirming that 'Coca-Cola Classic' does not list aspartame while 'Coca-Cola Zero Sugar' does. No further search is needed to complete the comparison, and no keywords are necessary for additional precision.  
-### Next Search Query:  
-NO_QUERY_NEEDED  
-### Keyword Search:  
+**Example 3:**
+### Original Question:
+Comparing ingredient lists, does 'Coca-Cola Classic' not list 'aspartame' while 'Coca-Cola Zero Sugar' does?
+### Current Fact:
+- According to the Coca-Cola Company’s website, Coca-Cola Zero Sugar includes aspartame and acesulfame potassium as sweeteners in its ingredient list.
+- The ingredient list for Coca-Cola Classic, as per the Coca-Cola Company’s product labeling, includes carbonated water, high fructose corn syrup, caramel color, phosphoric acid, natural flavors, and caffeine, with no mention of aspartame.
+### Reasoning for Next Query:
+The Original Question requires a comparison of ingredient lists. The 'Current Fact' already confirms that Coca-Cola Zero Sugar contains aspartame and Coca-Cola Classic does not. All necessary information to answer the Original Question has been gathered. Therefore, no further queries are needed.
+### Next Search Query:
+NO_QUERY_NEEDED
+### Keyword Search:
 NO_NEED
 
 **Example 4:**
-### Original Question:  
-Comparing the current official FDA guidance on daily sodium intake for adults with 'HealthySnacks Inc.'s' nutritional labels for their 'Savory Bites,' do all listed serving sizes fall within the FDA's 'low sodium' claim threshold?  
-### Current Fact:  
-- The FDA's current guidance, aligned with the Dietary Guidelines for Americans 2020-2025, recommends adults limit sodium intake to less than 2,300 mg per day to reduce the risk of hypertension and related health issues.  
-- According to 'HealthySnacks Inc.'s' website, one serving size of 'Savory Bites' (30 grams) contains 120 mg of sodium, listed on the nutritional label.  
-- The current documents do not confirm there is no additional serving sizes or sodium content for other variations of 'Savory Bites' from 'HealthySnacks Inc.'  
-- The current documents do not confirm there is no additional serving sizes or sodium content for other variations of 'Savory Bites' from 'HealthySnacks Inc.'  
-- The current documents do not confirm there is no additional serving sizes or sodium content for other variations of 'Savory Bites' from 'HealthySnacks Inc.'  
-### Reasoning for Next Query:  
-The Original Question requires comparing the FDA’s guidance on daily sodium intake for adults with the sodium content across all serving sizes of 'HealthySnacks Inc.'s' 'Savory Bites' to determine if they meet the FDA’s 'low sodium' claim threshold. The 'Current Fact' establishes two points: the FDA recommends adults limit sodium to less than 2,300 mg per day, and one serving (30 grams) of 'Savory Bites' contains 120 mg of sodium. However, the repeated facts highlight a gap—current documents do not confirm whether additional serving sizes or variations of 'Savory Bites' exist or their sodium content. Asking directly 'Are there additional serving sizes or sodium content for other variations of Savory Bites?' is likely unproductive, as prior searches already failed to clarify this, and such a narrow question may not yield new, actionable facts. Instead, to advance the comparison, we should focus on a different aspect: the FDA’s 'low sodium' claim threshold itself. Understanding this criterion—its definition and how it applies to packaged foods—is a less specific, foundational step that doesn’t depend on unconfirmed serving sizes. This allows us to establish a benchmark to later evaluate all potential 'Savory Bites' servings, even if only one is currently known. A semantic search is sufficient to grasp this broader concept, and keywords are unnecessary here to avoid over-constraining the query to specific terms already uncertain in the current facts.  
-### Next Search Query:  
-What is the FDA’s definition and criteria for the 'low sodium' claim threshold for packaged foods?  
-### Keyword Search:  
-NO_NEED
-
-**Now, generate the next search query:**  
-### Original Question: {question}  
-### Current Fact: {current_cot}  
-
+### Original Question:
+Comparing the current official FDA guidance on daily sodium intake for adults with 'HealthySnacks Inc.'s' nutritional labels for their 'Savory Bites,' do all listed serving sizes fall within the FDA's 'low sodium' claim threshold?
+### Current Fact:
+- The FDA's current guidance recommends adults limit sodium intake to less than 2,300 mg per day.
+- No new fact
 ### Reasoning for Next Query:
-"""
+The Original Question requires comparing the sodium in 'Savory Bites' to the FDA's 'low sodium' threshold. The presence of "No new fact" is a critical failure signal, indicating that the previous query (likely a complex one asking for all serving sizes and the threshold at once) was unsuccessful. I must now simplify my approach by breaking the problem down. Before I can compare the product's sodium content to the 'low sodium' threshold, I first need to establish what that threshold is. It's a foundational piece of information that is currently missing. Therefore, the next logical and much simpler query is to ask for the FDA's specific definition of a 'low sodium' claim. Also I need to avoid mention datetime and source.
+### Next Search Query:
+What is definition or criteria for a 'low sodium' claim on food packaging?
+### Keyword Search:
+"low sodium"
+
+**Now, generate the next search query:**
+### Original Question: {question}
+### Current Fact: {current_cot}
+
+### Reasoning for Next Query:"""
 
     FINAL_ANSWER_PROMPT = """You are an expert at synthesizing information from a given set of facts and providing concise final answers to a complex 'Original Question'.
 You are given the 'Original Question' and the 'Current Fact' (which is a list of all facts established in previous steps).
@@ -220,6 +241,7 @@ Instruction:
 2.  Thoroughly review all entries in the 'Current Fact' list.
 3.  Based on your analysis, write down your step-by-step `Reasoning for Final Answer`. This should explain how the 'Current Fact' entries collectively support the answer to the 'Original Question', or why they are insufficient. This might involve comparing facts from different sources, about different subjects, or from different time points mentioned in the Original Question.
 4.  Formulate the `Final Answer`.
+5.  If the `Current Fact` list does not specify the source and datetime, but contain all information to answer the `Original Question`, the `Confidence Score` should be punished lightly (as Source and datetime is not too important for the answer).
 
 Example 1:
 ### Original Question: According to "Tech Chronicle" and "Gadget Today," which company, known for its "Vision" series AI chips, recently announced a partnership with "AutoDrive Inc." to develop autonomous vehicle systems?
@@ -300,7 +322,10 @@ Requirements:
 2.  Follow the formatting of the examples provided for these sections.
 3.  The `Final Answer` must be concise and directly address the 'Original Question'. It should be a synthesis of the provided facts. This can be a definitive "Yes," "No," a specific name/entity. 
 4.  The `Confidence Score` must be an integer from 0 (no confidence/pure guess) to 5 (very high confidence/direct proof).
-5.  If the 'Current Fact' list provides very little or no evidence, or highly contradictory evidence without a clear path to resolution, the `Final Answer` should be "Insufficient information," and the `Confidence Score` should be low (e.g., 0 or 1). However, if there is suggestive evidence pointing towards a likely answer, even if not explicitly confirmed, provide that likely answer (which might be qualified, e.g., "Likely Yes") and use a moderate `Confidence Score` (e.g., 2, 3, or 4) to reflect the level of certainty. Do not make wild assumptions; inferences should be reasonably supported by the provided facts, with the confidence score indicating the strength of this inference.
+5.  If the 'Current Fact' list provides very little or no evidence, or highly contradictory evidence without a clear path to resolution, the `Final Answer` should be the most likely answer you can think of (short and concise) and the `Confidence Score` should be low. However, if there is suggestive evidence pointing towards a likely answer, even if not explicitly confirmed, provide that likely answer (which might be qualified, e.g., "Likely Yes") and use a moderate `Confidence Score` (e.g., 2, 3, or 4) to reflect the level of certainty. Do not make wild assumptions; inferences should be reasonably supported by the provided facts, with the confidence score indicating the strength of this inference.
+6.  If the 'Current Fact' list provides really little evidence, always try to put a concise and short answer into `Final Answer` and the `Confidence Score` should be 0.
+7.  Always avoid answer like 'No answer', 'No individual', 'Both yes and no'. You must be determined to answer the question with a proper answer (then low score if you are unsure).
+8.  The `Final Answer` should be short and concise (no more than 3 words, contain Yes/No/Name).
 
 Instruction:
 1.  Carefully analyze the 'Original Question' to understand precisely what is being asked, including any comparisons, conditions, changes over time, or specific entities involved.
@@ -375,10 +400,10 @@ Fact 1 ("Arctic Climate Report") discusses the 2022 ice melt but does not mentio
 Fact 2 ("Wildlife Conservation Bulletin") discusses polar bear conditions and behavior (long-distance swimming) in 2023 and links it to the Beaufort Sea region, but it does not state that the "Arctic Climate Report" also made this specific attribution.
 The core requirement that *both sources* attribute a *specific adaptive behavior* to the 2022 ice melt is not met. One source provides information on ice melt, the other on polar bear behavior, but the explicit link by both is missing.
 
-### Final Answer: Insufficient information.
+### Final Answer: long-distance swimming
 ### Confidence Score: 1
 
-Example 5 (New example for moderate confidence):
+Example 5:
 ### Original Question: Did the new "EcoGro" fertilizer, launched by "AgriCorp" in March 2023, contribute to the increased crop yields reported by Farmer Giles for his Q2 2023 harvest?
 
 ### Current Fact:
@@ -396,6 +421,23 @@ The evidence is suggestive but not definitive regarding "EcoGro's" contribution.
 
 ### Final Answer: Yes
 ### Confidence Score: 3
+
+Example 6:
+### Original Question: Did the new "EcoGro" fertilizer, launched by "AgriCorp" in March 2023, contribute to the increased crop yields reported by Farmer Giles for his Q2 2023 harvest?
+
+### Current Fact:
+- The current documents do not provide helpful information about the new "EcoGro" fertilizer
+- The current documents do not provide helpful information about the increased crop yields reported by Farmer Giles for his Q2 2023 harvest
+- The current documents do not provide helpful information about the new farming techniques that Farmer Giles tried this year
+- The current documents do not provide helpful information about the weather conditions in Farmer Giles' region in Q2 2023
+
+### Reasoning for Final Answer:
+The Original Question asks if "EcoGro" fertilizer contributed to Farmer Giles' increased Q2 2023 crop yields.
+All fact leads to no answer.
+As the intruction states, I should answer in proper manner, so I will put a 'No', the only important thing is to put a very low score for Confidence Score.
+
+### Final Answer: No
+### Confidence Score: 0
 
 Now, based on the following information, generate the final answer:
 ### Original Question: {question}
