@@ -405,9 +405,9 @@ def run_all_queries(components: Dict[str, Any]):
         print(f"Question: {question[:100]}..." if len(question) > 100 else f"Question: {question}")
         
         try:
-            # Process query through IR-COT
+            # Process query through IR-COT (disable individual reports for RUN_ALL mode)
             start_time = time.time()
-            result = ir_cot.query(question)
+            result = ir_cot.query(question, generate_individual_report=False)
             processing_time = time.time() - start_time
             
             # Extract information from IR-COT result

@@ -119,14 +119,19 @@ class IRCOTStructure(MultiHopRagStructure):
             else:
                 raise ValueError(f"No API key available for {component}")
                 
-    def query(self, question: str, **kwargs) -> Dict[str, Any]:
+    def query(self, question: str, generate_individual_report: bool = True, **kwargs) -> Dict[str, Any]:
         """
         Execute IR-COT query process following the updated specification:
         0. Preprocessing: Remove sources from the original question
         1. Initial query generation and retrieval 
         2. Iterative interleaving of fact extraction and query generation
         3. Final answer generation
-        4. Generate detailed JSON report
+        4. Generate detailed JSON report (optional)
+        
+        Args:
+            question: The question to answer
+            generate_individual_report: Whether to generate individual JSON report for this query
+            **kwargs: Additional keyword arguments
         """
         start_time = time.time()
         
@@ -295,16 +300,19 @@ class IRCOTStructure(MultiHopRagStructure):
                 }
             }
             
-            # Generate detailed JSON report
-            self._generate_json_report(
-                original_question=original_question_with_sources,
-                cleaned_question=question,
-                answer=final_answer,
-                answer_reasoning=answer_reasoning,
-                confidence_score=confidence,
-                fact_list=fact_list_for_report,
-                metadata=result['metadata']
-            )
+            # Generate detailed JSON report only if requested
+            if generate_individual_report and getattr(self.config, 'JSON_REPORT_ENABLE', True):
+                self._generate_json_report(
+                    original_question=original_question_with_sources,
+                    cleaned_question=question,
+                    answer=final_answer,
+                    answer_reasoning=answer_reasoning,
+                    confidence_score=confidence,
+                    fact_list=fact_list_for_report,
+                    metadata=result['metadata']
+                )
+            else:
+                self.logger.info("Individual JSON report generation skipped")
             
             return result
             

@@ -66,7 +66,7 @@ class Config:
     SEARCH_METHOD_WEIGHTS = {
         'semantic': 1.0,    # Primary score - semantic similarity is the main ranking factor
         'lexical': 0.02,    # Small boost for keyword matches
-        'fuzzy': 0.02       # Small boost for fuzzy keyword matches
+        'fuzzy': 0.01       # Small boost for fuzzy keyword matches
     }
 
     # Logging configuration
